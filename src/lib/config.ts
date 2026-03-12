@@ -8,7 +8,6 @@
 export interface UsptoConfig {
   patentsviewApiKey: string | null;
   tsdrApiKey: string | null;
-  ptabApiKey: string | null;
 }
 
 let cached: UsptoConfig | null = null;
@@ -18,7 +17,6 @@ export function getConfig(): UsptoConfig {
   cached = {
     patentsviewApiKey: process.env.USPTO_PATENTSVIEW_API_KEY ?? null,
     tsdrApiKey: process.env.USPTO_TSDR_API_KEY ?? null,
-    ptabApiKey: process.env.USPTO_PTAB_API_KEY ?? null,
   };
   return cached;
 }

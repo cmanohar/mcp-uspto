@@ -12,7 +12,7 @@ const DEFAULT_USER_AGENT =
 
 const userAgent = process.env.USPTO_USER_AGENT ?? DEFAULT_USER_AGENT;
 
-export type ApiType = "odp" | "patentsview" | "tsdr" | "ptab";
+export type ApiType = "odp" | "patentsview" | "tsdr";
 
 interface Bucket {
   tokens: number;
@@ -25,7 +25,6 @@ const buckets: Record<ApiType, Bucket> = {
   odp: { tokens: 10, maxTokens: 10, refillRate: 10, lastRefill: Date.now() },
   patentsview: { tokens: 3, maxTokens: 3, refillRate: 0.75, lastRefill: Date.now() },
   tsdr: { tokens: 5, maxTokens: 5, refillRate: 1, lastRefill: Date.now() },
-  ptab: { tokens: 5, maxTokens: 5, refillRate: 1, lastRefill: Date.now() },
 };
 
 function refillTokens(bucket: Bucket): void {

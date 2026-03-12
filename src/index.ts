@@ -3,8 +3,9 @@
 /**
  * mcp-uspto — MCP server for USPTO patent search, trademarks, assignments, and PTAB.
  *
- * Tier 1 tools (no API key): patent search, details, documents, assignments, status.
- * Tier 2 tools (free key): PatentsView search, inventor/assignee search, TSDR, PTAB.
+ * Tier 1 tools (no API key): patent search, details, documents, assignments, status,
+ *   continuity, foreign priority, PTAB decisions, PTAB proceedings.
+ * Tier 2 tools (free key): PatentsView search, inventor/assignee search, TSDR.
  *
  * Usage:
  *   npx mcp-uspto              # stdio transport (for Claude Code, Cursor, etc.)
@@ -21,8 +22,11 @@ import { registerPatentStatus } from "./tools/patent-status.js";
 import { registerPatentsviewSearch } from "./tools/patentsview-search.js";
 import { registerInventorSearch } from "./tools/inventor-search.js";
 import { registerAssigneeSearch } from "./tools/assignee-search.js";
-import { registerTrademarkStatus } from "./tools/trademark-status.js";
+import { registerPatentContinuity } from "./tools/patent-continuity.js";
+import { registerPatentForeignPriority } from "./tools/patent-foreign-priority.js";
 import { registerPtabDecisions } from "./tools/ptab-decisions.js";
+import { registerPtabProceedings } from "./tools/ptab-proceedings.js";
+import { registerTrademarkStatus } from "./tools/trademark-status.js";
 
 const server = new McpServer({
   name: "mcp-uspto",
@@ -35,13 +39,16 @@ registerPatentDetails(server);
 registerPatentDocuments(server);
 registerPatentAssignments(server);
 registerPatentStatus(server);
+registerPatentContinuity(server);
+registerPatentForeignPriority(server);
+registerPtabDecisions(server);
+registerPtabProceedings(server);
 
 // Tier 2: Optional API key (free registration)
 registerPatentsviewSearch(server);
 registerInventorSearch(server);
 registerAssigneeSearch(server);
 registerTrademarkStatus(server);
-registerPtabDecisions(server);
 
 async function main(): Promise<void> {
   const transport = new StdioServerTransport();

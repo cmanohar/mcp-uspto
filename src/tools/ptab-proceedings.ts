@@ -1,40 +1,36 @@
 /**
- * uspto_ptab_decisions — Search PTAB trial decisions via the Open Data Portal.
+ * uspto_ptab_proceedings — Search PTAB trial proceedings via the Open Data Portal.
  *
- * No API key required. Covers Inter Partes Review (IPR), Post-Grant Review (PGR),
- * Covered Business Method (CBM), and derivation proceedings.
- *
- * Migrated from developer.uspto.gov PTAB API v3 (key-required) to
- * data.uspto.gov ODP (free, no key).
+ * No API key required. Covers IPR, PGR, CBM, and derivation proceedings.
+ * Returns trial metadata, parties, and status.
  */
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { usptoFetchJson } from "../lib/fetcher.js";
 
-interface PtabDecision {
+interface PtabProceeding {
   trialNumber?: string;
   prosecutionStatus?: string;
   filingDate?: string;
   institutionDecisionDate?: string;
-  finalDecisionDate?: string;
   patentOwnerName?: string;
   petitionerPartyName?: string;
   patentNumber?: string;
   inventorName?: string;
-  respondentTechnologyCenterNumber?: string;
   trialType?: string;
+  respondentTechnologyCenterNumber?: string;
 }
 
-interface PtabResponse {
+interface PtabProceedingsResponse {
   count?: number;
-  results?: PtabDecision[];
+  results?: PtabProceeding[];
 }
 
-export function registerPtabDecisions(server: McpServer): void {
+export function registerPtabProceedings(server: McpServer): void {
   server.tool(
-    "uspto_ptab_decisions",
-    "Search Patent Trial and Appeal Board (PTAB) decisions — IPR, PGR, CBM proceedings. Find patent challenges by patent number, party name, or technology area. No API key required.",
+    "uspto_ptab_proceedings",
+    "Search PTAB trial proceedings (IPR, PGR, CBM) — find active and concluded patent challenges with parties, status, and timeline. No API key required.",
     {
       query: z
         .string()
@@ -66,23 +62,22 @@ export function registerPtabDecisions(server: McpServer): void {
       if (party_name) params.set("partyName", party_name);
       if (trial_type) params.set("trialType", trial_type);
 
-      const data = await usptoFetchJson<PtabResponse>(
-        `https://data.uspto.gov/api/v1/patent/trials/decisions/search?${params}`,
+      const data = await usptoFetchJson<PtabProceedingsResponse>(
+        `https://data.uspto.gov/api/v1/patent/trials/proceedings/search?${params}`,
         { apiType: "odp" },
       );
 
-      const decisions = (data.results ?? []).map((d) => ({
-        trial_number: d.trialNumber ?? null,
-        trial_type: d.trialType ?? null,
-        status: d.prosecutionStatus ?? null,
-        patent_number: d.patentNumber ?? null,
-        patent_owner: d.patentOwnerName ?? null,
-        petitioner: d.petitionerPartyName ?? null,
-        filing_date: d.filingDate ?? null,
-        institution_date: d.institutionDecisionDate ?? null,
-        final_decision_date: d.finalDecisionDate ?? null,
-        inventor: d.inventorName ?? null,
-        tech_center: d.respondentTechnologyCenterNumber ?? null,
+      const proceedings = (data.results ?? []).map((p) => ({
+        trial_number: p.trialNumber ?? null,
+        trial_type: p.trialType ?? null,
+        status: p.prosecutionStatus ?? null,
+        patent_number: p.patentNumber ?? null,
+        patent_owner: p.patentOwnerName ?? null,
+        petitioner: p.petitionerPartyName ?? null,
+        filing_date: p.filingDate ?? null,
+        institution_date: p.institutionDecisionDate ?? null,
+        inventor: p.inventorName ?? null,
+        tech_center: p.respondentTechnologyCenterNumber ?? null,
       }));
 
       return {
@@ -91,9 +86,9 @@ export function registerPtabDecisions(server: McpServer): void {
             type: "text" as const,
             text: JSON.stringify(
               {
-                total_count: data.count ?? decisions.length,
-                showing: decisions.length,
-                decisions,
+                total_count: data.count ?? proceedings.length,
+                showing: proceedings.length,
+                proceedings,
               },
               null,
               2,
