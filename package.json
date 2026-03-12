@@ -1,6 +1,6 @@
 {
   "name": "mcp-uspto",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "MCP server for USPTO — search patents, trademarks, assignments, PTAB decisions, and inventor/assignee data. No API key required for core tools.",
   "author": "Chinmay Patil",
   "license": "MIT",

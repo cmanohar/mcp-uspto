@@ -8,7 +8,7 @@
  */
 
 const DEFAULT_USER_AGENT =
-  "mcp-uspto/0.1.0 (https://github.com/cmanohar/mcp-uspto)";
+  "mcp-uspto/0.1.1 (https://github.com/cmanohar/mcp-uspto)";
 
 const userAgent = process.env.USPTO_USER_AGENT ?? DEFAULT_USER_AGENT;
 
@@ -88,6 +88,44 @@ export async function usptoFetchJson<T = unknown>(
   opts: FetchOptions = {},
 ): Promise<T> {
   const res = await usptoFetch(url, opts);
+  if (!res.ok) {
+    throw new Error(`USPTO API error: ${res.status} ${res.statusText} — ${url}`);
+  }
+  return (await res.json()) as T;
+}
+
+export interface PostJsonOptions extends FetchOptions {
+  /** JSON-serializable body to send as POST */
+  body: unknown;
+}
+
+/**
+ * POST JSON to a USPTO API endpoint with rate limiting and optional API key.
+ * Returns parsed JSON, throwing on HTTP errors.
+ */
+export async function usptoPostJson<T = unknown>(
+  url: string,
+  opts: PostJsonOptions,
+): Promise<T> {
+  const apiType = opts.apiType ?? "odp";
+  await waitForToken(apiType);
+
+  const headers: Record<string, string> = {
+    "User-Agent": userAgent,
+    Accept: "application/json",
+    "Content-Type": "application/json",
+  };
+
+  if (opts.apiKey) {
+    headers[opts.apiKeyHeader ?? "X-Api-Key"] = opts.apiKey;
+  }
+
+  const res = await fetch(url, {
+    method: "POST",
+    headers,
+    body: JSON.stringify(opts.body),
+  });
+
   if (!res.ok) {
     throw new Error(`USPTO API error: ${res.status} ${res.statusText} — ${url}`);
   }

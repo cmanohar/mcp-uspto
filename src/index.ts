@@ -3,9 +3,12 @@
 /**
  * mcp-uspto — MCP server for USPTO patent search, trademarks, assignments, and PTAB.
  *
- * Tier 1 tools (no API key): patent search, details, documents, assignments, status,
- *   continuity, foreign priority, PTAB decisions, PTAB proceedings.
- * Tier 2 tools (free key): PatentsView search, inventor/assignee search, TSDR.
+ * ODP tools (free API key — set USPTO_API_KEY): patent search, details, documents,
+ *   assignments, status, continuity, foreign priority, PTAB decisions, PTAB proceedings.
+ *   Register at https://data.uspto.gov/apis/getting-started
+ * PatentsView tools (free key — set USPTO_PATENTSVIEW_API_KEY): patentsview search,
+ *   inventor search, assignee search.
+ * TSDR tools (free key — set USPTO_TSDR_API_KEY): trademark status.
  *
  * Usage:
  *   npx mcp-uspto              # stdio transport (for Claude Code, Cursor, etc.)
@@ -30,10 +33,10 @@ import { registerTrademarkStatus } from "./tools/trademark-status.js";
 
 const server = new McpServer({
   name: "mcp-uspto",
-  version: "0.1.0",
+  version: "0.1.1",
 });
 
-// Tier 1: No API key required (Open Data Portal)
+// ODP tools: require free API key (USPTO_API_KEY)
 registerPatentSearch(server);
 registerPatentDetails(server);
 registerPatentDocuments(server);
@@ -44,10 +47,12 @@ registerPatentForeignPriority(server);
 registerPtabDecisions(server);
 registerPtabProceedings(server);
 
-// Tier 2: Optional API key (free registration)
+// PatentsView tools: require free API key (USPTO_PATENTSVIEW_API_KEY)
 registerPatentsviewSearch(server);
 registerInventorSearch(server);
 registerAssigneeSearch(server);
+
+// TSDR tools: require free API key (USPTO_TSDR_API_KEY)
 registerTrademarkStatus(server);
 
 async function main(): Promise<void> {

@@ -1,13 +1,14 @@
 /**
- * uspto_patent_assignments — Search patent assignment records.
+ * uspto_patent_assignments — Get assignment data for a patent application.
  *
- * No API key required. Returns ownership transfers, security interests,
- * and other IP transaction records from the USPTO Assignment database.
+ * Requires a free API key (set USPTO_API_KEY).
+ * Returns ownership transfers, security interests, and other IP transaction records.
  */
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { usptoFetchJson } from "../lib/fetcher.js";
+import { getConfig, keyMissingResponse } from "../lib/config.js";
 
 interface Assignment {
   assignorName?: string;
@@ -30,27 +31,27 @@ interface AssignmentsResponse {
 export function registerPatentAssignments(server: McpServer): void {
   server.tool(
     "uspto_patent_assignments",
-    "Search patent ownership transfers and assignments. Find IP acquisitions, security interests, and licensing deals by company name, patent number, or application number. No API key required.",
+    "Get patent ownership transfers and assignments for a specific application. Find IP acquisitions, security interests, and licensing deals. Requires free API key (set USPTO_API_KEY).",
     {
-      query: z
+      application_number: z
         .string()
-        .describe("Search query — company name, patent number, or application number"),
-      limit: z
-        .number()
-        .min(1)
-        .max(50)
-        .default(20)
-        .describe("Max results to return (default 20, max 50)"),
+        .describe("USPTO application number (e.g. '16123456' or '16/123,456')"),
     },
-    async ({ query, limit }) => {
-      const params = new URLSearchParams({
-        searchText: query,
-        rows: String(limit),
-      });
+    async ({ application_number }) => {
+      const config = getConfig();
+      if (!config.odpApiKey) {
+        return keyMissingResponse(
+          "USPTO_API_KEY",
+          "https://data.uspto.gov/apis/getting-started",
+          "uspto_patent_assignments",
+        );
+      }
+
+      const cleaned = application_number.replace(/[/,\s]/g, "");
 
       const data = await usptoFetchJson<AssignmentsResponse>(
-        `https://data.uspto.gov/api/v1/patent/assignment/search?${params}`,
-        { apiType: "odp" },
+        `https://api.uspto.gov/api/v1/patent-applications/${cleaned}/assignment`,
+        { apiType: "odp", apiKey: config.odpApiKey, apiKeyHeader: "X-API-Key" },
       );
 
       const assignments = (data.assignments ?? []).map((a) => ({
@@ -72,7 +73,7 @@ export function registerPatentAssignments(server: McpServer): void {
             type: "text" as const,
             text: JSON.stringify(
               {
-                query,
+                application_number: cleaned,
                 total_count: data.count ?? assignments.length,
                 results: assignments,
               },

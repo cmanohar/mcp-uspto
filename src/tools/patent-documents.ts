@@ -1,13 +1,14 @@
 /**
  * uspto_patent_documents — List file wrapper documents from the USPTO Open Data Portal.
  *
- * No API key required. Returns office actions, responses, claims,
- * and other prosecution documents for an application.
+ * Requires a free API key (set USPTO_API_KEY).
+ * Returns office actions, responses, claims, and other prosecution documents.
  */
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { usptoFetchJson } from "../lib/fetcher.js";
+import { getConfig, keyMissingResponse } from "../lib/config.js";
 
 interface Document {
   documentIdentifier?: string;
@@ -24,7 +25,7 @@ interface DocumentsResponse {
 export function registerPatentDocuments(server: McpServer): void {
   server.tool(
     "uspto_patent_documents",
-    "List file wrapper documents (office actions, responses, claims) for a patent application. No API key required.",
+    "List file wrapper documents (office actions, responses, claims) for a patent application. Requires free API key (set USPTO_API_KEY).",
     {
       application_number: z
         .string()
@@ -37,11 +38,20 @@ export function registerPatentDocuments(server: McpServer): void {
         .describe("Max documents to return (default 25, max 100)"),
     },
     async ({ application_number, limit }) => {
+      const config = getConfig();
+      if (!config.odpApiKey) {
+        return keyMissingResponse(
+          "USPTO_API_KEY",
+          "https://data.uspto.gov/apis/getting-started",
+          "uspto_patent_documents",
+        );
+      }
+
       const cleaned = application_number.replace(/[/,\s]/g, "");
 
       const data = await usptoFetchJson<DocumentsResponse>(
-        `https://data.uspto.gov/api/v1/patent/application/${cleaned}/documents`,
-        { apiType: "odp" },
+        `https://api.uspto.gov/api/v1/patent-applications/${cleaned}/documents`,
+        { apiType: "odp", apiKey: config.odpApiKey, apiKeyHeader: "X-API-Key" },
       );
 
       const docs = (data.documentBag ?? []).slice(0, limit).map((d) => ({

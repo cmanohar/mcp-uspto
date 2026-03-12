@@ -1,13 +1,14 @@
 /**
  * uspto_patent_details — Get detailed application data from the USPTO Open Data Portal.
  *
- * No API key required. Returns title, abstract, inventors, assignee,
- * classification, and prosecution status for a given application number.
+ * Requires a free API key (set USPTO_API_KEY).
+ * Returns title, abstract, inventors, assignee, classification, and prosecution status.
  */
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { usptoFetchJson } from "../lib/fetcher.js";
+import { getConfig, keyMissingResponse } from "../lib/config.js";
 
 interface ApplicationData {
   applicationNumberText?: string;
@@ -29,18 +30,27 @@ interface ApplicationData {
 export function registerPatentDetails(server: McpServer): void {
   server.tool(
     "uspto_patent_details",
-    "Get detailed patent application data — title, abstract, inventors, assignee, classification, status. No API key required.",
+    "Get detailed patent application data — title, abstract, inventors, assignee, classification, status. Requires free API key (set USPTO_API_KEY).",
     {
       application_number: z
         .string()
         .describe("USPTO application number (e.g. '16123456' or '16/123,456')"),
     },
     async ({ application_number }) => {
+      const config = getConfig();
+      if (!config.odpApiKey) {
+        return keyMissingResponse(
+          "USPTO_API_KEY",
+          "https://data.uspto.gov/apis/getting-started",
+          "uspto_patent_details",
+        );
+      }
+
       const cleaned = application_number.replace(/[/,\s]/g, "");
 
       const data = await usptoFetchJson<ApplicationData>(
-        `https://data.uspto.gov/api/v1/patent/application/${cleaned}`,
-        { apiType: "odp" },
+        `https://api.uspto.gov/api/v1/patent-applications/${cleaned}`,
+        { apiType: "odp", apiKey: config.odpApiKey, apiKeyHeader: "X-API-Key" },
       );
 
       return {

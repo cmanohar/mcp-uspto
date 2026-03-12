@@ -1,39 +1,49 @@
 /**
- * uspto_patent_status — Get prosecution timeline for a patent application.
+ * uspto_patent_status — Get prosecution timeline/transactions for a patent application.
  *
- * No API key required. Returns the full status history from filing
- * through grant or abandonment.
+ * Requires a free API key (set USPTO_API_KEY).
+ * Returns the full transaction history from filing through grant or abandonment.
  */
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { usptoFetchJson } from "../lib/fetcher.js";
+import { getConfig, keyMissingResponse } from "../lib/config.js";
 
-interface StatusCode {
+interface Transaction {
   statusCodeText?: string;
   statusDate?: string;
   statusDescriptionText?: string;
 }
 
-interface StatusResponse {
-  statusCodeBag?: StatusCode[];
+interface TransactionsResponse {
+  statusCodeBag?: Transaction[];
 }
 
 export function registerPatentStatus(server: McpServer): void {
   server.tool(
     "uspto_patent_status",
-    "Get the full prosecution timeline of a patent application — every status change from filing to grant/abandonment. No API key required.",
+    "Get the full prosecution timeline of a patent application — every status change from filing to grant/abandonment. Requires free API key (set USPTO_API_KEY).",
     {
       application_number: z
         .string()
         .describe("USPTO application number (e.g. '16123456' or '16/123,456')"),
     },
     async ({ application_number }) => {
+      const config = getConfig();
+      if (!config.odpApiKey) {
+        return keyMissingResponse(
+          "USPTO_API_KEY",
+          "https://data.uspto.gov/apis/getting-started",
+          "uspto_patent_status",
+        );
+      }
+
       const cleaned = application_number.replace(/[/,\s]/g, "");
 
-      const data = await usptoFetchJson<StatusResponse>(
-        `https://data.uspto.gov/api/v1/patent/application/${cleaned}/status`,
-        { apiType: "odp" },
+      const data = await usptoFetchJson<TransactionsResponse>(
+        `https://api.uspto.gov/api/v1/patent-applications/${cleaned}/transactions`,
+        { apiType: "odp", apiKey: config.odpApiKey, apiKeyHeader: "X-API-Key" },
       );
 
       const timeline = (data.statusCodeBag ?? []).map((s) => ({

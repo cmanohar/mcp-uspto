@@ -1,13 +1,15 @@
 /**
  * uspto_patent_search — Search patents via the USPTO Open Data Portal.
  *
- * No API key required. Entry point for patent research — returns application
- * numbers that can be used with patent-details, patent-documents, and patent-status.
+ * Requires a free API key (set USPTO_API_KEY).
+ * Entry point for patent research — returns application numbers that can be
+ * used with patent-details, patent-documents, and patent-status.
  */
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { usptoFetchJson } from "../lib/fetcher.js";
+import { usptoPostJson } from "../lib/fetcher.js";
+import { getConfig, keyMissingResponse } from "../lib/config.js";
 
 interface SearchResult {
   applicationNumberText?: string;
@@ -27,7 +29,7 @@ interface SearchResponse {
 export function registerPatentSearch(server: McpServer): void {
   server.tool(
     "uspto_patent_search",
-    "Search USPTO patents by keyword. Returns application numbers, titles, inventors, and status. No API key required. Use the returned application numbers with uspto_patent_details, uspto_patent_documents, and uspto_patent_status.",
+    "Search USPTO patents by keyword. Returns application numbers, titles, inventors, and status. Requires free API key (set USPTO_API_KEY). Use the returned application numbers with uspto_patent_details, uspto_patent_documents, and uspto_patent_status.",
     {
       query: z.string().describe("Search query — keywords, patent number, or application number"),
       start: z
@@ -43,15 +45,26 @@ export function registerPatentSearch(server: McpServer): void {
         .describe("Max results to return (default 20, max 50)"),
     },
     async ({ query, start, limit }) => {
-      const params = new URLSearchParams({
-        searchText: query,
-        start: String(start),
-        rows: String(limit),
-      });
+      const config = getConfig();
+      if (!config.odpApiKey) {
+        return keyMissingResponse(
+          "USPTO_API_KEY",
+          "https://data.uspto.gov/apis/getting-started",
+          "uspto_patent_search",
+        );
+      }
 
-      const data = await usptoFetchJson<SearchResponse>(
-        `https://data.uspto.gov/api/v1/patent/application/search?${params}`,
-        { apiType: "odp" },
+      const data = await usptoPostJson<SearchResponse>(
+        "https://api.uspto.gov/api/v1/patent-applications/search",
+        {
+          apiType: "odp",
+          apiKey: config.odpApiKey,
+          apiKeyHeader: "X-API-Key",
+          body: {
+            q: query,
+            pagination: { offset: start, limit },
+          },
+        },
       );
 
       const results = (data.patentFileWrapperSearchResults ?? []).map((r) => ({

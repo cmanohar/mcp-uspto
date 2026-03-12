@@ -1,11 +1,14 @@
 /**
  * Configuration for USPTO API keys.
  *
- * All keys are optional — Tier 1 (Open Data Portal) tools work without any key.
- * Tier 2 tools return a helpful setup message when their key is missing.
+ * All ODP (Open Data Portal) tools require a free API key from
+ * https://data.uspto.gov/apis/getting-started — set USPTO_API_KEY.
+ *
+ * PatentsView and TSDR have their own keys.
  */
 
 export interface UsptoConfig {
+  odpApiKey: string | null;
   patentsviewApiKey: string | null;
   tsdrApiKey: string | null;
 }
@@ -15,6 +18,7 @@ let cached: UsptoConfig | null = null;
 export function getConfig(): UsptoConfig {
   if (cached) return cached;
   cached = {
+    odpApiKey: process.env.USPTO_API_KEY ?? null,
     patentsviewApiKey: process.env.USPTO_PATENTSVIEW_API_KEY ?? null,
     tsdrApiKey: process.env.USPTO_TSDR_API_KEY ?? null,
   };
@@ -22,7 +26,7 @@ export function getConfig(): UsptoConfig {
 }
 
 /**
- * Returns a structured "key missing" response for key-optional tools.
+ * Returns a structured "key missing" response for key-required tools.
  * This is returned as content (not thrown), so the LLM gets helpful guidance.
  */
 export function keyMissingResponse(envVar: string, registrationUrl: string, toolName: string) {
@@ -36,8 +40,6 @@ export function keyMissingResponse(envVar: string, registrationUrl: string, tool
             tool: toolName,
             message: `This tool requires an API key. Set the ${envVar} environment variable.`,
             registration: registrationUrl,
-            suggestion:
-              "For patent searches without an API key, try the uspto_patent_search tool which uses the Open Data Portal (no key required).",
           },
           null,
           2,

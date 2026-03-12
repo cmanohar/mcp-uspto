@@ -75,7 +75,7 @@ export function registerAssigneeSearch(server: McpServer): void {
         headers: {
           "Content-Type": "application/json",
           "X-Api-Key": config.patentsviewApiKey,
-          "User-Agent": "mcp-uspto/0.1.0",
+          "User-Agent": "mcp-uspto/0.1.1",
         },
         body: JSON.stringify(body),
       });

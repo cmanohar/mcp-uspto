@@ -1,16 +1,15 @@
 /**
- * uspto_ptab_decisions — Search PTAB trial decisions via the Open Data Portal.
+ * uspto_ptab_decisions — Search PTAB trial decisions via the USPTO Open Data Portal.
  *
- * No API key required. Covers Inter Partes Review (IPR), Post-Grant Review (PGR),
+ * Requires a free API key (set USPTO_API_KEY).
+ * Covers Inter Partes Review (IPR), Post-Grant Review (PGR),
  * Covered Business Method (CBM), and derivation proceedings.
- *
- * Migrated from developer.uspto.gov PTAB API v3 (key-required) to
- * data.uspto.gov ODP (free, no key).
  */
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { usptoFetchJson } from "../lib/fetcher.js";
+import { usptoPostJson } from "../lib/fetcher.js";
+import { getConfig, keyMissingResponse } from "../lib/config.js";
 
 interface PtabDecision {
   trialNumber?: string;
@@ -34,7 +33,7 @@ interface PtabResponse {
 export function registerPtabDecisions(server: McpServer): void {
   server.tool(
     "uspto_ptab_decisions",
-    "Search Patent Trial and Appeal Board (PTAB) decisions — IPR, PGR, CBM proceedings. Find patent challenges by patent number, party name, or technology area. No API key required.",
+    "Search Patent Trial and Appeal Board (PTAB) decisions — IPR, PGR, CBM proceedings. Find patent challenges by patent number, party name, or technology area. Requires free API key (set USPTO_API_KEY).",
     {
       query: z
         .string()
@@ -60,15 +59,34 @@ export function registerPtabDecisions(server: McpServer): void {
         .describe("Max results (default 20, max 50)"),
     },
     async ({ query, patent_number, party_name, trial_type, limit }) => {
-      const params = new URLSearchParams({ rows: String(limit) });
-      if (query) params.set("searchText", query);
-      if (patent_number) params.set("patentNumber", patent_number);
-      if (party_name) params.set("partyName", party_name);
-      if (trial_type) params.set("trialType", trial_type);
+      const config = getConfig();
+      if (!config.odpApiKey) {
+        return keyMissingResponse(
+          "USPTO_API_KEY",
+          "https://data.uspto.gov/apis/getting-started",
+          "uspto_ptab_decisions",
+        );
+      }
 
-      const data = await usptoFetchJson<PtabResponse>(
-        `https://data.uspto.gov/api/v1/patent/trials/decisions/search?${params}`,
-        { apiType: "odp" },
+      // Build search query string from parameters
+      const parts: string[] = [];
+      if (query) parts.push(query);
+      if (patent_number) parts.push(`patentNumber:${patent_number}`);
+      if (party_name) parts.push(`partyName:"${party_name}"`);
+      if (trial_type) parts.push(`trialType:${trial_type}`);
+      const q = parts.join(" AND ") || "*";
+
+      const data = await usptoPostJson<PtabResponse>(
+        "https://api.uspto.gov/api/v1/patent-trials/decisions/search",
+        {
+          apiType: "odp",
+          apiKey: config.odpApiKey,
+          apiKeyHeader: "X-API-Key",
+          body: {
+            q,
+            pagination: { offset: 0, limit },
+          },
+        },
       );
 
       const decisions = (data.results ?? []).map((d) => ({
