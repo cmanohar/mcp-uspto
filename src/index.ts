@@ -33,7 +33,7 @@ import { registerTrademarkStatus } from "./tools/trademark-status.js";
 
 const server = new McpServer({
   name: "mcp-uspto",
-  version: "0.1.1",
+  version: "0.1.2",
 });
 
 // ODP tools: require free API key (USPTO_API_KEY)

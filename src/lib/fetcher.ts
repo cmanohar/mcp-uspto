@@ -8,7 +8,7 @@
  */
 
 const DEFAULT_USER_AGENT =
-  "mcp-uspto/0.1.1 (https://github.com/cmanohar/mcp-uspto)";
+  "mcp-uspto/0.1.2 (https://github.com/cmanohar/mcp-uspto)";
 
 const userAgent = process.env.USPTO_USER_AGENT ?? DEFAULT_USER_AGENT;
 
